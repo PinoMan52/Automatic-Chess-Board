@@ -1,0 +1,368 @@
+#include <AccelStepper.h>
+
+#define yLeftStep 2
+#define yRightStep 4
+#define yLeftDir 3
+#define yRightDir 5
+#define L298_IN1 6
+#define L298_IN2 7
+#define enable 8
+#define xPin1 9
+#define xPin2 10
+#define xPin3 11
+#define xPin4 12
+
+#define STEPS_PER_REVOLUTION 200
+
+AccelStepper yLeft(AccelStepper::DRIVER, yLeftStep, yLeftDir);
+AccelStepper yRight(AccelStepper::DRIVER, yRightStep, yRightDir);
+AccelStepper x(AccelStepper::FULL4WIRE, xPin1, xPin2, xPin3, xPin4);
+
+int const spaceSize = 42; //mm
+int takenPieces = 0;
+int t = 500; //time to get to piece from anywhere in one axis
+
+void moveX(float space) {
+  float const mmPerStep = .41155;
+  float mm = spaceSize*space;
+  float steps = (mm/mmPerStep);
+
+  // Rotate the stepper motor
+  x.moveTo(steps);
+  while (x.distanceToGo() != 0) {
+    x.run();
+  }
+}
+void moveY(float space) {
+  float const mmPerStep = .41155;
+  float mm = spaceSize*space;
+  float steps = (mm/mmPerStep);
+  yLeft.moveTo(-steps);
+  yRight.moveTo(steps);
+
+  while (yLeft.distanceToGo() != 0 || yRight.distanceToGo() != 0) {
+    yLeft.run();
+    yRight.run();
+  }
+}
+
+void moveXY(float xd, float y) {
+  float const mmPerStep = .41155;
+  float mmX = spaceSize*xd;
+  float stepsX = (mmX/mmPerStep);
+  float mmY = spaceSize*y;
+  float stepsY = (mmY/mmPerStep);
+  yLeft.moveTo(-stepsY);
+  yRight.moveTo(stepsY);
+  x.moveTo(stepsX);
+
+  while ((yLeft.distanceToGo() != 0 || yRight.distanceToGo() != 0) || x.distanceToGo() != 0) {
+    yLeft.run();
+    yRight.run();
+    x.run();
+  }
+}
+
+void movePiece(char pos1x, int pos1y, char pos2x, int pos2y, bool capture = false, bool knight = false, bool bishop = false) {
+  //go to pos1 and move piece to pos2
+  double x1 = 0;
+  double y1 = 0;
+  double x2 = 0;
+  double y2 = 0;
+
+  if (pos1x == 'a') {
+    x1 = -3.5;
+  } else if (pos1x == 'b') {
+    x1 = -2.5;
+  } else if (pos1x == 'c') {
+    x1 = -1.5;
+  } else if (pos1x == 'd') {
+    x1 = -.5;
+  } else if (pos1x == 'e') {
+    x1 = .5;
+  } else if (pos1x == 'f') {
+    x1 = 1.5;
+  } else if (pos1x == 'g') {
+    x1 = 2.5;
+  } else if (pos1x == 'h') {
+    x1 = 3.5;
+  }
+  if (pos1y == 1) {
+    y1 = -3.5;
+  } else if (pos1y == 2) {
+    y1 = -2.5;
+  } else if (pos1y == 3) {
+    y1 = -1.5;
+  } else if (pos1y == 4) {
+    y1 = -.5;
+  } else if (pos1y == 5) {
+    y1 = .5;
+  } else if (pos1y == 6) {
+    y1 = 1.5;
+  } else if (pos1y == 7) {
+    y1 = 2.5;
+  } else if (pos1y == 8) {
+    y1 = 3.5;
+  }
+  if (pos2x == 'a') {
+    x2 = -3.5;
+  } else if (pos2x == 'b') {
+    x2 = -2.5;
+  } else if (pos2x == 'c') {
+    x2 = -1.5;
+  } else if (pos2x == 'd') {
+    x2 = -.5;
+  } else if (pos2x == 'e') {
+    x2 = .5;
+  } else if (pos2x == 'f') {
+    x2 = 1.5;
+  } else if (pos2x == 'g') {
+    x2 = 2.5;
+  } else if (pos2x == 'h') {
+    x2 = 3.5;
+  }
+  if (pos2y == 1) {
+    y2 = -3.5;
+  } else if (pos2y == 2) {
+    y2 = -2.5;
+  } else if (pos2y == 3) {
+    y2 = -1.5;
+  } else if (pos2y == 4) {
+    y2 = -.5;
+  } else if (pos2y == 5) {
+    y2 = .5;
+  } else if (pos2y == 6) {
+    y2 = 1.5;
+  } else if (pos2y == 7) {
+    y2 = 2.5;
+  } else if (pos2y == 8) {
+    y2 = 3.5;
+  } 
+
+  if (capture == true) {
+    moveX(x2);
+    moveY(y2);
+    delay(t); //change based on how long it takes to get to piece (currently 2000)
+    //activate electromagnet
+    delay(500);
+    if (takenPieces < 10) {
+      moveX(.5);
+      delay(500);
+      moveY((4 - y2));
+      delay(t);
+      moveX((4.5 - x2));
+      delay(t);
+      moveY((8.5 - takenPieces));
+      delay(t);
+      //turn off electromagnet
+      moveX((4.5));
+      moveY((5.5 - takenPieces));
+      delay(t);
+    } else if (takenPieces < 20) {
+      moveY((.5));
+      delay(500);
+      moveX(-1*(4 - x2));
+      delay(t);
+      moveY((4.5 - y2));
+      delay(t);
+      moveY((18.5 - takenPieces)); //fix all of these
+      delay(t);
+      //turn off electromagnet
+      moveY((-4.5));
+      moveX(-1*(15.5 - takenPieces));
+      delay(t);
+    } else if (takenPieces < 30) { //these next two chunks are the same as the first two but with all directions being reversed
+      moveX(-.5);
+      delay(500);
+      moveY(-1*(4 - y2));
+      delay(t);
+      moveX(-1*(4.5 - x2));
+      delay(t);
+      moveY(-1*(28.5 - takenPieces));
+      delay(t);
+      //turn off electromagnet
+      moveX((4.5));
+      moveY(-1*(25.5 - takenPieces));
+      delay(t);
+    } else if (takenPieces < 40) {
+      moveY(-.5);
+      delay(500);
+      moveX((4 - x2));
+      delay(t);
+      moveY(-1*(4.5 - y2));
+      delay(t);
+      moveY(-1*(38.5 - takenPieces));
+      delay(t);
+      //turn off electromagnet
+      moveY(-1*(4.5));
+      moveX((35.5 - takenPieces));
+      delay(t);
+    }
+    takenPieces++;
+  }
+
+  moveX(x1);
+  moveY(y1);
+  delay(t);
+  //activate electromagnet
+  delay(500);
+
+  //for movements in straight lines
+  if (knight == false && bishop == false) {
+    if (pos1x == pos2x) {
+      moveY((y2 - y1)); //may need to switch two values
+    } else if (pos1y == pos2y) {
+      moveX((x2 - x1));
+    } // else if (pos1y != pos2y && pos1x != pos2x) {
+    //   moveY((y2 - y1)); //may need to switch two values
+    //   moveX((x2 - x1));  
+    // }
+  } else if (knight == true) {
+    if (fabs(x1 - x2) > fabs(y1 - y2)) {
+      //use the x axis line to traverse between pieces
+      if (y1 > y2) {
+        moveY(-.5);
+        delay(500);
+        moveX((x2 - x1));
+        delay(1000);
+        moveY(-.5);
+      } else {
+        moveY((.5));
+        delay(500);
+        moveX((x2 - x1));
+        delay(1000);
+        moveY(.5);
+      }
+    } else {
+      //use the y axis line to traverse between pieces
+      if (x1 > x2) {
+        moveX(-.5);
+        delay(500);
+        moveY((y2 - y1));
+        delay(1000);
+        moveX(-.5);
+      } else {
+        moveX((.5));
+        delay(500);
+        moveY((y2 - y1));
+        delay(1000);
+        moveX((.5));
+      }
+    }
+  } else if (bishop == true) {
+
+  }
+  delay(t);
+  //turn off electromagnet
+
+  //return to home
+  moveX((-x1));
+  moveY((-y1)); //may need to switch two values
+  delay(t);
+
+}
+void castle(bool white, bool queenSide) {
+  if (white == true) {
+    if (queenSide == false) {
+      moveXY(3.5, -3.5);
+      //electromagnet on
+      moveY(-.5);
+      moveX(-2);
+      //electromagnet off
+      moveXY(-1, .5);
+      //electromagnet on
+      moveX(2);
+      //electromagnet off
+      moveXY(-1, -.5);
+      //electromagnet on
+      moveY(.5);
+      //electromagnet off
+      moveXY(-1.5, 4.5);
+    } else if (queenSide == true) {
+      moveXY(-3.5, -3.5);
+      //electromagnet on
+      moveY(-.5);
+      moveX(3);
+      //electromagnet off
+      moveXY(2, .5);
+      //electromagnet on
+      moveX(-2);
+      //electromagnet off
+      moveXY(1, -.5);
+      //electromagnet on
+      moveY(.5);
+      //electromagnet off
+      moveXY(1.5, 4.5);
+    }
+  } else if (white == false) {
+    if (queenSide == false) {
+      moveXY(3.5, 3.5);
+      //electromagnet on
+      moveY(.5);
+      moveX(-2);
+      //electromagnet off
+      moveXY(-1, -.5);
+      //electromagnet on
+      moveX(2);
+      //electromagnet off
+      moveXY(-1, .5);
+      //electromagnet on
+      moveY(-.5);
+      //electromagnet off
+      moveXY(-1.5, -4.5);
+    } else if (queenSide == true) {
+      moveXY(-3.5, 3.5);
+      //electromagnet on
+      moveY(.5);
+      moveX(3);
+      //electromagnet off
+      moveXY(2, -.5);
+      //electromagnet on
+      moveX(-2);
+      //electromagnet off
+      moveXY(1, .5);
+      //electromagnet on
+      moveY(-.5);
+      //electromagnet off
+      moveXY(1.5, -4.5);
+    }
+  }
+  delay(1000);
+}
+
+void setup() {
+  // put your setup code here, to run once:
+  yLeft.setMaxSpeed(1000);
+  yLeft.setAcceleration(500);
+  yRight.setMaxSpeed(1000);
+  yRight.setAcceleration(500);
+  x.setMaxSpeed(1000);
+  x.setAcceleration(500);
+  pinMode(L298_IN1, OUTPUT);
+  pinMode(L298_IN2, OUTPUT);
+  pinMode(enable, OUTPUT);
+}
+
+void loop() {
+  moveX(1);
+  moveY(15);
+  delay(1000);
+  moveX(-1);
+  moveY(-15);
+  delay(1000);
+  moveXY(1, 12);
+  moveXY(-1, 12);
+  moveXY(-1, -12);
+  moveXY(1, -12);
+  delay(1000);
+  moveX(2);
+  moveY(10);
+  delay(1000);
+  moveX(-4);
+  moveY(-10);
+  moveX(4);
+  moveY(5);
+  moveX(-2);
+
+}
+
